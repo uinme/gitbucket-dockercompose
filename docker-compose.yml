@@ -1,0 +1,43 @@
+services:
+  gitbucket-postgres:
+    image: postgres:16.4
+    container_name: gitbucket-postgres
+    hostname: gitbucketpg
+    restart: always
+    environment:
+      - POSTGRES_DB=gitbucket
+      - POSTGRES_USER=gitbucket
+      - POSTGRES_PASSWORD=gitbucket
+      - POSTGRES_HOST_AUTH_METHOD=password
+      - TZ=Asia/Tokyo
+    volumes:
+      - ./pg_data:/var/lib/postgresql/data
+    healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U gitbucket -d gitbucket"]
+        interval: 10s
+        timeout: 10s
+        retries: 5
+        start_period: 5s
+    ports:
+      - 54322:5432
+
+  gitbucket:
+    build: .
+    container_name: gitbucket
+    restart: always
+    environment:
+      - GITBUCKET_PORT=8080
+      - GITBUCKET_DB_URL=jdbc:postgresql://gitbucketpg:5432/gitbucket
+      - GITBUCKET_DB_USER=gitbucket
+      - GITBUCKET_DB_PASSWORD=gitbucket
+      - TZ=Asia/Tokyo
+    volumes:
+      - ./data:/gitbucket
+    ports:
+      - 8888:8080
+      - 29418:29418
+    depends_on:
+      gitbucket-postgres:
+        condition: service_healthy
+    links:
+      - gitbucket-postgres:database
